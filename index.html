@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferretería El Constructor</title>
+<style>
+:root{--primary:#d97706;--dark:#172033;--light:#f4f6f8;--white:#fff;--green:#15803d;--red:#b91c1c}
+*{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:var(--light);color:#222}
+header{background:var(--dark);color:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+header h1{margin:0;color:#fbbf24;font-size:24px} header small{color:#ddd}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 5%;background:#fff;box-shadow:0 2px 8px #0001}
+button,.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:bold}
+nav button{background:#eee} nav button.active,button.primary{background:var(--primary);color:#fff}
+main{max-width:1200px;margin:auto;padding:20px 5%}.view{display:none}.view.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;margin-bottom:20px}
+.card{background:#fff;padding:18px;border-radius:12px;box-shadow:0 2px 10px #0001}.card h3{margin:0 0 8px}.number{font-size:28px;font-weight:bold}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.panel{background:#fff;padding:18px;border-radius:12px;box-shadow:0 2px 10px #0001}
+label{display:block;font-weight:bold;margin:10px 0 5px}input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:7px}
+table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}th{background:#f3f4f6}
+.actions{display:flex;gap:7px;flex-wrap:wrap}.danger{background:#fee2e2;color:var(--red)}.success{background:#dcfce7;color:var(--green)}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px}.product{background:#fff;border-radius:12px;padding:15px;box-shadow:0 2px 8px #0001}.product .icon{font-size:42px}
+.total{font-size:24px;text-align:right;font-weight:bold;margin:15px 0}
+.empty{text-align:center;color:#777;padding:25px}
+footer{text-align:center;padding:25px;color:#666}
+@media(max-width:700px){.grid{grid-template-columns:1fr}table{font-size:13px}th,td{padding:7px}header{justify-content:center;text-align:center}}
+@media print{header,nav,.no-print,footer{display:none!important}.view{display:none!important}.view#facturacion{display:block!important}.print-only{display:block!important}}
+.print-only{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🔨 Ferretería El Constructor</h1><small>Ventas, inventario y facturación</small></div>
+  <div id="fecha"></div>
+</header>
+<nav>
+  <button class="active" onclick="showView('inicio',this)">Inicio</button>
+  <button onclick="showView('productos',this)">Productos</button>
+  <button onclick="showView('clientes',this)">Clientes</button>
+  <button onclick="showView('facturacion',this)">Facturación</button>
+  <button onclick="showView('historial',this)">Historial</button>
+</nav>
+
+<main>
+<section id="inicio" class="view active">
+  <h2>Panel principal</h2>
+  <div class="cards">
+    <div class="card"><h3>Productos</h3><div class="number" id="statProducts">0</div></div>
+    <div class="card"><h3>Clientes</h3><div class="number" id="statClients">0</div></div>
+    <div class="card"><h3>Facturas</h3><div class="number" id="statInvoices">0</div></div>
+    <div class="card"><h3>Ventas</h3><div class="number" id="statSales">L 0.00</div></div>
+  </div>
+  <div class="panel"><h3>¿Cómo funciona?</h3><p>Esta versión guarda productos, clientes y facturas en el <b>LocalStorage</b> del navegador. No necesita servidor ni internet para conservar los datos en ese dispositivo.</p></div>
+</section>
+
+<section id="productos" class="view">
+  <h2>Productos e inventario</h2>
+  <div class="grid">
+    <div class="panel">
+      <h3>Agregar producto</h3>
+      <form id="productForm">
+        <label>Nombre</label><input id="pName" required>
+        <label>Categoría</label><input id="pCategory" placeholder="Herramientas, pintura...">
+        <label>Precio (L)</label><input id="pPrice" type="number" min="0" step=".01" required>
+        <label>Existencia</label><input id="pStock" type="number" min="0" step="1" required>
+        <br><br><button class="primary">Guardar producto</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h3>Inventario</h3><div id="productTable"></div>
+    </div>
+  </div>
+</section>
+
+<section id="clientes" class="view">
+  <h2>Clientes</h2>
+  <div class="grid">
+    <div class="panel">
+      <h3>Registrar cliente</h3>
+      <form id="clientForm">
+        <label>Nombre completo</label><input id="cName" required>
+        <label>Teléfono</label><input id="cPhone">
+        <label>Identidad / RTN</label><input id="cId">
+        <br><br><button class="primary">Guardar cliente</button>
+      </form>
+    </div>
+    <div class="panel"><h3>Clientes registrados</h3><div id="clientTable"></div></div>
+  </div>
+</section>
+
+<section id="facturacion" class="view">
+  <h2>Facturación</h2>
+  <div class="grid">
+    <div class="panel no-print">
+      <h3>Nueva factura</h3>
+      <label>Cliente</label><select id="invoiceClient"></select>
+      <label>Producto</label><select id="invoiceProduct"></select>
+      <label>Cantidad</label><input id="invoiceQty" type="number" min="1" value="1">
+      <br><br><button class="primary" onclick="addToCart()">Agregar al detalle</button>
+      <hr>
+      <div id="cart"></div>
+      <div class="total" id="cartTotal">Total: L 0.00</div>
+      <button class="success" onclick="saveInvoice()">💾 Guardar factura</button>
+      <button onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <div class="panel">
+      <h3>Comprobante</h3>
+      <div id="receipt"><div class="empty">Agrega productos para generar la factura.</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="historial" class="view">
+  <h2>Historial de facturas</h2>
+  <div class="panel" id="invoiceTable"></div>
+</section>
+</main>
+<footer>Ferretería El Constructor · Sistema local de ventas</footer>
+
+<script>
+const KEY='ferreteria_constructor_v1';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ products:[
+  {id:1,name:'Martillo',category:'Herramientas',price:250,stock:20},
+  {id:2,name:'Destornillador',category:'Herramientas',price:120,stock:30},
+  {id:3,name:'Pintura blanca 1 galón',category:'Pintura',price:650,stock:15},
+  {id:4,name:'Cemento 42.5 kg',category:'Construcción',price:230,stock:50}
+ ],
+ clients:[], invoices:[]
+};
+let cart=[];
+function persist(){localStorage.setItem(KEY,JSON.stringify(db));updateAll()}
+function money(n){return 'L '+Number(n).toFixed(2)}
+function showView(id,btn){
+ document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ if(btn)btn.classList.add('active');
+ renderReceipt();
+}
+function updateAll(){
+ document.getElementById('statProducts').textContent=db.products.length;
+ document.getElementById('statClients').textContent=db.clients.length;
+ document.getElementById('statInvoices').textContent=db.invoices.length;
+ document.getElementById('statSales').textContent=money(db.invoices.reduce((a,i)=>a+i.total,0));
+ renderProducts();renderClients();loadSelects();renderInvoices();renderCart();
+}
+function renderProducts(){
+ const el=document.getElementById('productTable');
+ if(!db.products.length){el.innerHTML='<div class="empty">No hay productos.</div>';return}
+ el.innerHTML='<table><tr><th>Producto</th><th>Precio</th><th>Stock</th><th></th></tr>'+
+ db.products.map(p=>`<tr><td>${esc(p.name)}<br><small>${esc(p.category)}</small></td><td>${money(p.price)}</td><td>${p.stock}</td><td><button class="danger" onclick="deleteProduct(${p.id})">Eliminar</button></td></tr>`).join('')+'</table>';
+}
+function renderClients(){
+ const el=document.getElementById('clientTable');
+ if(!db.clients.length){el.innerHTML='<div class="empty">No hay clientes.</div>';return}
+ el.innerHTML='<table><tr><th>Nombre</th><th>Teléfono</th><th>Identidad/RTN</th><th></th></tr>'+
+ db.clients.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${esc(c.idn)}</td><td><button class="danger" onclick="deleteClient(${c.id})">Eliminar</button></td></tr>`).join('')+'</table>';
+}
+function loadSelects(){
+ const cs=document.getElementById('invoiceClient');
+ cs.innerHTML='<option value="">Cliente general</option>'+db.clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+ const ps=document.getElementById('invoiceProduct');
+ ps.innerHTML=db.products.filter(p=>p.stock>0).map(p=>`<option value="${p.id}">${esc(p.name)} — ${money(p.price)} (${p.stock})</option>`).join('');
+}
+function addToCart(){
+ const id=Number(document.getElementById('invoiceProduct').value), qty=Number(document.getElementById('invoiceQty').value);
+ const p=db.products.find(x=>x.id===id);
+ if(!p||qty<1||qty>p.stock)return alert('Revisa el producto y la cantidad disponible.');
+ const existing=cart.find(x=>x.productId===id);
+ if(existing){if(existing.qty+qty>p.stock)return alert('No hay suficiente existencia.');existing.qty+=qty}
+ else cart.push({productId:id,qty});
+ renderCart();
+}
+function renderCart(){
+ const el=document.getElementById('cart');
+ if(!cart.length){el.innerHTML='<div class="empty">Detalle vacío.</div>';document.getElementById('cartTotal').textContent='Total: L 0.00';renderReceipt();return}
+ let total=0;
+ el.innerHTML='<table><tr><th>Producto</th><th>Cant.</th><th>Importe</th><th></th></tr>'+
+ cart.map((x,i)=>{let p=db.products.find(y=>y.id===x.productId),sub=p.price*x.qty;total+=sub;return `<tr><td>${esc(p.name)}</td><td>${x.qty}</td><td>${money(sub)}</td><td><button class="danger" onclick="removeCart(${i})">X</button></td></tr>`}).join('')+'</table>';
+ document.getElementById('cartTotal').textContent='Total: '+money(total);renderReceipt();
+}
+function removeCart(i){cart.splice(i,1);renderCart()}
+function saveInvoice(){
+ if(!cart.length)return alert('Agrega al menos un producto.');
+ const clientId=Number(document.getElementById('invoiceClient').value)||null;
+ for(const x of cart){const p=db.products.find(y=>y.id===x.productId);if(!p||x.qty>p.stock)return alert('Stock insuficiente.');}
+ const items=cart.map(x=>{const p=db.products.find(y=>y.id===x.productId);p.stock-=x.qty;return {name:p.name,price:p.price,qty:x.qty,subtotal:p.price*x.qty}});
+ const total=items.reduce((a,x)=>a+x.subtotal,0);
+ const invoice={id:Date.now(),number:'FAC-'+String(db.invoices.length+1).padStart(4,'0'),date:new Date().toLocaleString('es-HN'),clientId,items,total};
+ db.invoices.push(invoice);cart=[];persist();alert('Factura guardada correctamente.');renderReceipt(invoice);
+}
+function renderReceipt(invoice=null){
+ const el=document.getElementById('receipt');
+ invoice=invoice||null;
+ if(!invoice&&!cart.length){el.innerHTML='<div class="empty">Agrega productos para generar la factura.</div>';return}
+ if(!invoice){
+  const client=db.clients.find(c=>c.id===Number(document.getElementById('invoiceClient').value));
+  const items=cart.map(x=>{const p=db.products.find(y=>y.id===x.productId);return {name:p.name,price:p.price,qty:x.qty,subtotal:p.price*x.qty}});
+  invoice={number:'BORRADOR',date:new Date().toLocaleString('es-HN'),clientId:client?.id,items,total:items.reduce((a,x)=>a+x.subtotal,0)};
+ }
+ const client=db.clients.find(c=>c.id===invoice.clientId);
+ el.innerHTML=`<div style="text-align:center"><h2>🔨 FERRETERÍA EL CONSTRUCTOR</h2><p>Comprobante de venta</p></div>
+ <p><b>Factura:</b> ${invoice.number}<br><b>Fecha:</b> ${invoice.date}<br><b>Cliente:</b> ${esc(client?.name||'Cliente general')}<br><b>Identidad/RTN:</b> ${esc(client?.idn||'—')}</p>
+ <table><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr>${invoice.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>${money(i.price)}</td><td>${money(i.subtotal)}</td></tr>`).join('')}</table>
+ <h2 style="text-align:right">TOTAL: ${money(invoice.total)}</h2><p style="text-align:center">¡Gracias por su compra!</p>`;
+}
+function renderInvoices(){
+ const el=document.getElementById('invoiceTable');
+ if(!db.invoices.length){el.innerHTML='<div class="empty">Todavía no hay facturas.</div>';return}
+ el.innerHTML='<table><tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>Total</th><th></th></tr>'+
+ db.invoices.slice().reverse().map(i=>{const c=db.clients.find(x=>x.id===i.clientId);return `<tr><td>${i.number}</td><td>${i.date}</td><td>${esc(c?.name||'Cliente general')}</td><td>${money(i.total)}</td><td><button onclick="viewInvoice(${i.id})">Ver</button></td></tr>`}).join('')+'</table>';
+}
+function viewInvoice(id){const i=db.invoices.find(x=>x.id===id);if(i){showView('facturacion');renderReceipt(i)}}
+function deleteProduct(id){if(confirm('¿Eliminar este producto?')){db.products=db.products.filter(p=>p.id!==id);persist()}}
+function deleteClient(id){if(confirm('¿Eliminar este cliente?')){db.clients=db.clients.filter(c=>c.id!==id);persist()}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+document.getElementById('productForm').addEventListener('submit',e=>{
+ e.preventDefault();db.products.push({id:Date.now(),name:pName.value,category:pCategory.value,price:Number(pPrice.value),stock:Number(pStock.value)});e.target.reset();persist();alert('Producto guardado.');
+});
+document.getElementById('clientForm').addEventListener('submit',e=>{
+ e.preventDefault();db.clients.push({id:Date.now(),name:cName.value,phone:cPhone.value,idn:cId.value});e.target.reset();persist();alert('Cliente guardado.');
+});
+document.getElementById('fecha').textContent=new Date().toLocaleDateString('es-HN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+updateAll();
+</script>
+</body>
+</html>
